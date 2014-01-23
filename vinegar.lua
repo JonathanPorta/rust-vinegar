@@ -1,32 +1,51 @@
-PLUGIN.Title = "Testing"
-PLUGIN.Description = "A test plugin"
+PLUGIN.Title = "Vinegar"
+PLUGIN.Description = "Building modification plugin for admins and users."
+PLUGIN.Author = "Jonathan Porta (rurd4me) http://jonathanporta.com"
+PLUGIN.Version = "0.1"
 
 function PLUGIN:Init()
- self:AddChatCommand("test", self.cmdTest)
- self:AddChatCommand("structures", self.structures)
+
+	-- List of users with Vinegar enable.
+	self.users = {}
+ 
+ 	-- Get a reference to the oxmin plugin
+	local oxminPlugin = cs.findplugin("oxmin")
+	if (not oxminPlugin) then
+		error("Oxmin plugin was not found!")
+		return
+	end
+
+	-- Register Flag for Vinegar usage.
+	local FLAG_VINEGAR = oxmin.AddFlag("canvinegar")
+ 
+	-- Register main chat command
+	oxminPlugin:AddExternalOxminChatCommand(self, "vinegar", {FLAG_VINEGAR}, self.DoCommand)
 end
 
-function PLUGIN:cmdTest(netuser, cmd, args)
-	rust.Notice(netuser, "Testing!")
-	local kit = {
-		{item="Wood Foundation", qty="250"},
-		{item="Wood Pillar", qty="250"},
-		{item="Wood Wall", qty="250"},
-		{item="Wood Ceiling", qty="250"},
-		{item="Wood Doorway", qty="250"},
-		{item="Wood Ramp", qty="250"},
-		{item="Metal Foundation", qty="250"},
-		{item="Metal Pillar", qty="250"},
-		{item="Metal Wall", qty="250"},
-		{item="Metal Ceiling", qty="250"},
-		{item="Metal Doorway", qty="250"},
-		{item="Metal Ramp", qty="250"},
-	}
 
-	for k, v in pairs(kit) do
-		local cmd = "inv.giveplayer \"" .. util.QuoteSafe( netuser.displayName ) .. "\" \"" .. util.QuoteSafe( v['item'] ) .. "\" " .. tostring(v['qty'])
-		print("Running Command:", cmd)		
-		rust.RunServerCommand(cmd)
+function PLUGIN:DoCommand(netuser, args)
+
+	print("Vinegar DoCommand")
+	vardump(args)
+
+	self:Toggle(netuser)
+	
+end
+
+function PLUGIN:Toggle(netuser)
+
+	print("vinegar.lua - function PLUGIN:Toggle(netuser)")
+	print("self.users")
+	vardump("self.users")
+
+	steamID = self:NetuserToSteamID(netuser)
+	
+	if(self.users[steamID]) then
+		self.users[steamID] = false
+		rust.SendChatToUser(netuser, "Vinegar off. You are safe to hit buildings without consequence.")
+	else
+		self.users[steamID] = true
+		rust.SendChatToUser(netuser, "Vinegar on. You will now damage buildings.")
 	end
 end
 
@@ -34,178 +53,66 @@ end
 -- PLUGIN:OnTakeDamage()
 -- Called when an entity take damage
 -- *******************************************
-  local allStructures = util.GetStaticPropertyGetter(Rust.StructureMaster, 'AllStructures')
-  local getStructureMasterOwnerId = util.GetFieldGetter(Rust.StructureMaster, "ownerID", true)
+	local allStructures = util.GetStaticPropertyGetter(Rust.StructureMaster, 'AllStructures')
+	local getStructureMasterOwnerId = util.GetFieldGetter(Rust.StructureMaster, "ownerID", true)
 
 function PLUGIN:ModifyDamage(takedamage, damage)
-	print("PLUGIN:ModifyDamage")
-	--print("VARDUMP: takedamage")
-	--vardump(takedamage)
+	print("vinegar.lua - PLUGIN:ModifyDamage(takedamage, damage)")
 
-	--print("VARDUMP: damage")
-	--vardump(damage)
 
-	--for i=0, allStructures().Count-1
-	--do
-	--	print("ownerID: ")
-	--	print(getStructureMasterOwnerId(allStructures()[i]))
-	--end
-
-	local char = takedamage:GetComponent("Character")
-	local deployable = takedamage:GetComponent("DeployableObject")
+	--local char = takedamage:GetComponent("Character")
+	--local deployable = takedamage:GetComponent("DeployableObject")
 	local structureComponent = takedamage:GetComponent("StructureComponent")
 
-	if (deployable) then
+	--if (deployable) then
 		--print("trying to print deployable next")
 		--print(deployable)
-	end
+	--end
 
-	if (structureComponent) then
-		structureMaster = structureComponent._master
-		print("sm for sc:")
-		vardump(structureMaster)
-		
-		print("SM ownerID:")
-		print(getStructureMasterOwnerId(structureMaster))
-
-		--print("structureMaster._owner:")
-		--testy = structureMaster._owner
-		--vardump(testy)
-
-		--print("damage.attacker:")
-		--vardump(damage.attacker)
-
-		--print("damage.attacker.client")
-		--vardump(damage.attacker.client)
-
-		--print("damage.attacker.client.netUser")
-		--vardump(damage.attacker.client.netUser)
-		
+	if(structureComponent) then
+		-- A structure has been attacked!
+		local structureMaster = structureComponent._master
 		local attacker = damage.attacker
+		local damageToTake = 0
+
+		-- TODO: This user to player to net to steam crap is messy.
 		if(attacker) then
 			local attackerClient = damage.attacker.client
 			if attackerClient then
 				local attackerUser = attackerClient.netUser
 				if(attackerUser) then
-					--print("Attacked by a user!")
-					--rust.Notice(attackerUser, "You are attacking a structure!")
-					--rust.SendChatToUser(attackerUser, "You are attacking a structure!")
-
+					-- Attacker is another player!
+					-- Find the structure owner.
 					structureOwnerId = getStructureMasterOwnerId(structureMaster)
 					structureOwnerSteamId = rust.CommunityIDToSteamID(structureOwnerId)
 
-					attackerUserId = rust.GetUserID(attackerUser)
-					attackerSteamId = rust.CommunityIDToSteamID(tonumber(attackerUserId))
-					
-					if(structureOwnerSteamId == attackerSteamId) then
-						--rust.Notice(attackerUser, "Breaking your own shit.")
-						--rust.SendChatToUser(attackerUser, "Breaking your own shit.")
-					else
-						rust.Notice(attackerUser, "Breaking someone else's shit. Don't be a douchebag, douchebag.")
-						rust.SendChatToUser(attackerUser, "Breaking someone else's shit. Don't be a douchebag, douchebag.")
+					--Figure out if the attacker is allowed to cause damage.
+					attackerSteamId = self:NetuserToSteamID(attackerUser)
+					if(self.users[attackerSteamId])then
+						-- vinegar is on, but who's stuff are we messing with?
+						if(structureOwnerSteamId == attackerSteamId) then
+							--destroying your own stuff? Ok.
+							damageToTake = 1000
+						else
+							-- Only admins can destroy other's things for now!
+							oxminPluginInstance = cs.findplugin("oxmin")
+							if(oxminPluginInstance.HasFlag(oxminPluginInstance, attackerUser, oxmin.AddFlag("godmode"), true)) then
+								damageToTake = 1000
+							else
+								rust.Notice(attackerUser, "This is not yours!")
+							end
+						end
 					end
 				end
 			end
 		end
-
-		damage.amount = 1000
+		damage.amount = damageToTake
 		return damage
 	end	
-
-	if (char) then
-		local netplayer = char.networkViewOwner
-		if (netplayer) then
-			local netuser = rust.NetUserFromNetPlayer(netplayer)
-			if (netuser) then
-				if (self:HasFlag( netuser, FLAG_GODMODE, true )) then
-					damage.amount = 0
-					return damage
-				end
-			end
-		end
-	end
 end
 
-function PLUGIN:OnStructureDecay(structure)
-	print("Structure Decayed...")
-	print(getStructureMasterOwnerId(structure))
-end
-
-
-function vardump(value, depth, key)
-  local linePrefix = ""
-  local spaces = ""
-  
-  if key ~= nil then
-    linePrefix = "["..key.."] = "
-  end
-  
-  if depth == nil then
-    depth = 0
-  else
-    depth = depth + 1
-    for i=1, depth do spaces = spaces .. "  " end
-  end
-  
-  if type(value) == 'table' then
-    mTable = getmetatable(value)
-    if mTable == nil then
-      print(spaces ..linePrefix.."(table) ")
-    else
-      print(spaces .."(metatable) ")
-        value = mTable
-    end		
-    for tableKey, tableValue in pairs(value) do
-      vardump(tableValue, depth, tableKey)
-    end
-  elseif type(value)	== 'function' or 
-      type(value)	== 'thread' or 
-      type(value)	== 'userdata' or
-      value		== nil
-  then
-    print(spaces..tostring(value))
-  else
-    print(spaces..linePrefix.."("..type(value)..") "..tostring(value))
-  end
-end
-
-
-
---local GetStructureMasterOwnerIDField = field_get( Rust.StructureMaster, "ownerID", true )
---local AllStructures = static_property_get( Rust.StructureMaster, "AllStructures")
-
-function PLUGIN:structures(netUser)
-	print("Rust.StructureMaster:")
-	vardump(Rust.StructureMaster)
-	print("Rust:")
-	vardump(Rust)
-	
-	print("rust:")
-	vardump(rust)
-
-	print("JSON: Rust.StructureMaster:")
-	vardump(json.encode(Rust.StructureMaster))
-	print(json.encode(Rust.StructureMaster))
-
-	print("JSON: Rust:")
-	vardump(json.encode(Rust))
-	print(json.encode(Rust))
-	print("JSON: rust:")
-	vardump(json.encode(rust))
-    -- Get the array that holds all StructureMaster objects in the world.
-  
-    -- Loop all the strucutres
-    --for i=0, AllStructures().Count-1
-   -- do
-        -- Print the ID attached to this structure
-        --print(self:GetStructureOwnerID(AllStructures()[i]))
-		--print("All Structures: ")
-		--vardump(AllStructures()[i])
-    --end
-end
-
-
--- Get the ID for this structure
-function PLUGIN:GetStructureOwnerID(structure)
-    --return GetStructureMasterOwnerIDField(structure)
+function PLUGIN:NetuserToSteamID(netuser)
+	userID = rust.GetUserID(netuser)
+	steamID = rust.CommunityIDToSteamID(tonumber(userID))
+	return steamID
 end

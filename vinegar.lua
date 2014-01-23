@@ -1,3 +1,9 @@
+----
+-- Vinegar - Building modification plugin.
+-- Written by Jonathan Porta (rurd4me) http://jonathanporta.com
+-- Repository - https://github.com/JonathanPorta/rust-vinegar
+---
+
 PLUGIN.Title = "Vinegar"
 PLUGIN.Description = "Building modification plugin for admins and users."
 PLUGIN.Author = "Jonathan Porta (rurd4me) http://jonathanporta.com"
@@ -5,7 +11,7 @@ PLUGIN.Version = "0.1"
 
 function PLUGIN:Init()
 
-	-- List of users with Vinegar enable.
+	-- List of users with Vinegar enabled.
 	self.users = {}
  
  	-- Get a reference to the oxmin plugin
@@ -25,18 +31,17 @@ end
 
 function PLUGIN:DoCommand(netuser, args)
 
-	print("Vinegar DoCommand")
-	vardump(args)
-
+	--print("Vinegar DoCommand")
+	--vardump(args)
 	self:Toggle(netuser)
 	
 end
 
 function PLUGIN:Toggle(netuser)
 
-	print("vinegar.lua - function PLUGIN:Toggle(netuser)")
-	print("self.users")
-	vardump("self.users")
+	--print("vinegar.lua - function PLUGIN:Toggle(netuser)")
+	--print("self.users")
+	--vardump("self.users")
 
 	steamID = self:NetuserToSteamID(netuser)
 	
@@ -53,11 +58,11 @@ end
 -- PLUGIN:OnTakeDamage()
 -- Called when an entity take damage
 -- *******************************************
-	local allStructures = util.GetStaticPropertyGetter(Rust.StructureMaster, 'AllStructures')
-	local getStructureMasterOwnerId = util.GetFieldGetter(Rust.StructureMaster, "ownerID", true)
+local allStructures = util.GetStaticPropertyGetter(Rust.StructureMaster, 'AllStructures')
+local getStructureMasterOwnerId = util.GetFieldGetter(Rust.StructureMaster, "ownerID", true)
 
 function PLUGIN:ModifyDamage(takedamage, damage)
-	print("vinegar.lua - PLUGIN:ModifyDamage(takedamage, damage)")
+	--print("vinegar.lua - PLUGIN:ModifyDamage(takedamage, damage)")
 
 
 	--local char = takedamage:GetComponent("Character")

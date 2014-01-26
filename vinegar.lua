@@ -11,8 +11,9 @@ PLUGIN.Version = "0.1"
 
 function PLUGIN:Init()
 
-	-- List of users with Vinegar enabled.
-	self.users = {}
+	-- List of users with Vinegar/prod enabled.
+	self.vinegarUsers = {}
+	self.prodUsers = {}
  
  	-- Get a reference to the oxmin plugin
 	local oxminPlugin = cs.findplugin("oxmin")
@@ -23,33 +24,48 @@ function PLUGIN:Init()
 
 	-- Register Flag for Vinegar usage.
 	local FLAG_VINEGAR = oxmin.AddFlag("canvinegar")
+	local FLAG_VINEGAR = oxmin.AddFlag("canprod")
  
 	-- Register main chat command
-	oxminPlugin:AddExternalOxminChatCommand(self, "vinegar", {FLAG_VINEGAR}, self.DoCommand)
+	oxminPlugin:AddExternalOxminChatCommand(self, "vinegar", {FLAG_VINEGAR}, self.ToggleVinegar)
+	oxminPlugin:AddExternalOxminChatCommand(self, "prod", {FLAG_VINEGAR}, self.ToggleProd)
+
+	-- Read in Oxmin's stash of user infos.
+	-- From oxmin.lua
+	self.dataFile = util.GetDatafile("oxmin")
+	local txt = self.dataFile:GetText()
+	if (txt ~= "") then
+		self.data = json.decode(txt)
+	else
+		self.data = {}
+		self.data.Users = {}
+	end
 end
 
 
-function PLUGIN:DoCommand(netuser, args)
-
-	--print("Vinegar DoCommand")
-	--vardump(args)
-	self:Toggle(netuser)
-	
-end
-
-function PLUGIN:Toggle(netuser)
-
-	--print("vinegar.lua - function PLUGIN:Toggle(netuser)")
-	--print("self.users")
-	--vardump("self.users")
+function PLUGIN:ToggleProd(netuser, args)
 
 	steamID = self:NetuserToSteamID(netuser)
 	
-	if(self.users[steamID]) then
-		self.users[steamID] = false
+	if(self.prodUsers[steamID]) then
+		self.prodUsers[steamID] = false
+		rust.SendChatToUser(netuser, "Prod off.")
+	else
+		self.prodUsers[steamID] = true
+		rust.SendChatToUser(netuser, "Prod on.")
+	end
+	
+end
+
+function PLUGIN:ToggleVinegar(netuser, args)
+
+	steamID = self:NetuserToSteamID(netuser)
+	
+	if(self.vinegarUsers[steamID]) then
+		self.vinegarUsers[steamID] = false
 		rust.SendChatToUser(netuser, "Vinegar off. You are safe to hit buildings without consequence.")
 	else
-		self.users[steamID] = true
+		self.vinegarUsers[steamID] = true
 		rust.SendChatToUser(netuser, "Vinegar on. You will now damage buildings.")
 	end
 end
@@ -91,9 +107,9 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 					structureOwnerId = getStructureMasterOwnerId(structureMaster)
 					structureOwnerSteamId = rust.CommunityIDToSteamID(structureOwnerId)
 
-					--Figure out if the attacker is allowed to cause damage.
+					-- Figure out if the attacker is allowed to cause damage.
 					attackerSteamId = self:NetuserToSteamID(attackerUser)
-					if(self.users[attackerSteamId])then
+					if(self.vinegarUsers[attackerSteamId]) then
 						-- vinegar is on, but who's stuff are we messing with?
 						if(structureOwnerSteamId == attackerSteamId) then
 							--destroying your own stuff? Ok.
@@ -106,6 +122,15 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 							else
 								rust.Notice(attackerUser, "This is not yours!")
 							end
+						end
+					end
+					-- Prod Implementation
+					if(self.prodUsers[attackerSteamId]) then
+						if(self.data.Users[""..structureOwnerId]) then
+							local details = self.data.Users[""..structureOwnerId]
+							rust.Notice(attackerUser, "This is owned by "..details.Name.."!")
+						else
+							rust.Notice(attackerUser, "Sorry, don't know who owns this...")
 						end
 					end
 				end

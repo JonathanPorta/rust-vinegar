@@ -1,5 +1,5 @@
 ----
--- Vinegar - Building modification plugin.
+-- Vinegar - Building modification plugin with interrogation.
 -- Written by Jonathan Porta (rurd4me) http://jonathanporta.com
 -- Repository - https://github.com/JonathanPorta/rust-vinegar
 ---
@@ -7,7 +7,7 @@
 PLUGIN.Title = "Vinegar"
 PLUGIN.Description = "Building modification plugin for admins and users."
 PLUGIN.Author = "Jonathan Porta (rurd4me) http://jonathanporta.com"
-PLUGIN.Version = "0.1"
+PLUGIN.Version = "0.2"
 
 function PLUGIN:Init()
 

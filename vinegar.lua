@@ -11,11 +11,6 @@ PLUGIN.Version = "0.3"
 
 function PLUGIN:Init()
 
-	-- Enable for all
-	-- Might be configurable in the future
-	self.enableForAll = true
-	self.damage = 1000
-
 	-- List of users with Vinegar/prod enabled.
 	self.vinegarUsers = {}
 	self.prodUsers = {}
@@ -47,13 +42,30 @@ function PLUGIN:Init()
 		self.data = {}
 		self.data.Users = {}
 	end
+
+	-- Read saved config
+	self.configFile = util.GetDatafile("vinegar")
+	local txt = self.configFile:GetText()
+	if (txt ~= "") then
+		self.config = json.decode(txt)
+	else
+		print("Vinegar config file missing. Falling back to default settings.")
+		self.config = {}
+		self.config.damage = 1000
+	end
 	
-	print("Vinegar plugin loaded!")
+	print("Vinegar plugin loaded - default damage set to: "..self.config.damage)
 end
 
+function PLUGIN:Save()
+	print("Saving config to file.")
+	self.configFile:SetText(json.encode(self.config))
+	self.configFile:Save()
+end
 
 function PLUGIN:ToggleProd(netuser, args)
 
+	-- Toggles prod on/off for user.
 	steamID = self:NetuserToSteamID(netuser)
 	
 	if(self.prodUsers[steamID]) then
@@ -68,10 +80,12 @@ end
 
 function PLUGIN:ToggleVinegar(netuser, args)
 
+	-- Toggles vinegar on/off for user.
 	steamID = self:NetuserToSteamID(netuser)
 	if(args[1]) then
 		rust.SendChatToUser(netuser, "Setting damage amount to: "..args[1])
-		self.damage = tonumber(args[1])
+		self.config.damage = tonumber(args[1])
+		self:Save()
 	else
 		if(self.vinegarUsers[steamID]) then
 			self.vinegarUsers[steamID] = false
@@ -127,13 +141,13 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 						-- vinegar is on, but who's stuff are we messing with?
 						if(structureOwnerSteamId == attackerSteamId) then
 							--destroying your own stuff? Ok.
-							damage.amount = self.damage
+							damage.amount = self.config.damage
 							return damage
 						else
 							-- Only admins can destroy other's things for now!
 							oxminPluginInstance = cs.findplugin("oxmin")
 							if(oxminPluginInstance.HasFlag(oxminPluginInstance, attackerUser, oxmin.AddFlag("godmode"), true)) then
-								damage.amount = self.damage
+								damage.amount = self.config.damage
 								return damage
 							else
 								rust.Notice(attackerUser, "This is not yours!")

@@ -7,9 +7,13 @@
 PLUGIN.Title = "Vinegar"
 PLUGIN.Description = "Building modification plugin for admins and users."
 PLUGIN.Author = "Jonathan Porta (rurd4me) http://jonathanporta.com"
-PLUGIN.Version = "0.2"
+PLUGIN.Version = "0.3"
 
 function PLUGIN:Init()
+
+	-- Enable for all
+	-- Might be configurable in the future
+	self.enableAll = true
 
 	-- List of users with Vinegar/prod enabled.
 	self.vinegarUsers = {}
@@ -89,7 +93,7 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 		--print("trying to print deployable next")
 		--print(deployable)
 	--end
-
+	--return nil
 	if(structureComponent) then
 		-- A structure has been attacked!
 		local structureMaster = structureComponent._master
@@ -113,12 +117,14 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 						-- vinegar is on, but who's stuff are we messing with?
 						if(structureOwnerSteamId == attackerSteamId) then
 							--destroying your own stuff? Ok.
-							damageToTake = 1000
+							damage.amount = 1000
+							return damage
 						else
 							-- Only admins can destroy other's things for now!
 							oxminPluginInstance = cs.findplugin("oxmin")
 							if(oxminPluginInstance.HasFlag(oxminPluginInstance, attackerUser, oxmin.AddFlag("godmode"), true)) then
-								damageToTake = 1000
+								damage.amount = 1000
+								return damage
 							else
 								rust.Notice(attackerUser, "This is not yours!")
 							end
@@ -136,8 +142,6 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 				end
 			end
 		end
-		damage.amount = damageToTake
-		return damage
 	end	
 end
 

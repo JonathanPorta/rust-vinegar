@@ -13,7 +13,8 @@ function PLUGIN:Init()
 
 	-- Enable for all
 	-- Might be configurable in the future
-	self.enableAll = true
+	self.enableForAll = true
+	self.damage = 1000
 
 	-- List of users with Vinegar/prod enabled.
 	self.vinegarUsers = {}
@@ -31,7 +32,9 @@ function PLUGIN:Init()
 	local FLAG_PROD = oxmin.AddFlag("canprod")
  
 	-- Register main chat command
-	oxminPlugin:AddExternalOxminChatCommand(self, "vinegar", {FLAG_VINEGAR}, self.ToggleVinegar)
+	oxminPlugin:AddExternalOxminChatCommand(self, "vinegar", {}, self.ToggleVinegar)
+	-- Uncomment this line if you want to require the canvinegar flag.
+	--oxminPlugin:AddExternalOxminChatCommand(self, "vinegar", {FLAG_VINEGAR}, self.ToggleVinegar)
 	oxminPlugin:AddExternalOxminChatCommand(self, "prod", {FLAG_PROD}, self.ToggleProd)
 
 	-- Read in Oxmin's stash of user infos.
@@ -44,6 +47,8 @@ function PLUGIN:Init()
 		self.data = {}
 		self.data.Users = {}
 	end
+	
+	print("Vinegar plugin loaded!")
 end
 
 
@@ -64,13 +69,17 @@ end
 function PLUGIN:ToggleVinegar(netuser, args)
 
 	steamID = self:NetuserToSteamID(netuser)
-	
-	if(self.vinegarUsers[steamID]) then
-		self.vinegarUsers[steamID] = false
-		rust.SendChatToUser(netuser, "Vinegar off. You are safe to hit buildings without consequence.")
+	if(args[1]) then
+		rust.SendChatToUser(netuser, "Setting damage amount to: "..args[1])
+		self.damage = tonumber(args[1])
 	else
-		self.vinegarUsers[steamID] = true
-		rust.SendChatToUser(netuser, "Vinegar on. You will now damage buildings.")
+		if(self.vinegarUsers[steamID]) then
+			self.vinegarUsers[steamID] = false
+			rust.SendChatToUser(netuser, "Vinegar off. You are safe to hit buildings without consequence.")
+		else
+			self.vinegarUsers[steamID] = true
+			rust.SendChatToUser(netuser, "Vinegar on. You will now damage buildings.")
+		end
 	end
 end
 
@@ -82,6 +91,7 @@ local allStructures = util.GetStaticPropertyGetter(Rust.StructureMaster, 'AllStr
 local getStructureMasterOwnerId = util.GetFieldGetter(Rust.StructureMaster, "ownerID", true)
 
 function PLUGIN:ModifyDamage(takedamage, damage)
+	--TODO: This function is getting too long...
 	--print("vinegar.lua - PLUGIN:ModifyDamage(takedamage, damage)")
 
 
@@ -117,13 +127,13 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 						-- vinegar is on, but who's stuff are we messing with?
 						if(structureOwnerSteamId == attackerSteamId) then
 							--destroying your own stuff? Ok.
-							damage.amount = 1000
+							damage.amount = self.damage
 							return damage
 						else
 							-- Only admins can destroy other's things for now!
 							oxminPluginInstance = cs.findplugin("oxmin")
 							if(oxminPluginInstance.HasFlag(oxminPluginInstance, attackerUser, oxmin.AddFlag("godmode"), true)) then
-								damage.amount = 1000
+								damage.amount = self.damage
 								return damage
 							else
 								rust.Notice(attackerUser, "This is not yours!")

@@ -24,11 +24,11 @@ function PLUGIN:Init()
 
 	-- Register Flag for Vinegar usage.
 	local FLAG_VINEGAR = oxmin.AddFlag("canvinegar")
-	local FLAG_VINEGAR = oxmin.AddFlag("canprod")
+	local FLAG_PROD = oxmin.AddFlag("canprod")
  
 	-- Register main chat command
 	oxminPlugin:AddExternalOxminChatCommand(self, "vinegar", {FLAG_VINEGAR}, self.ToggleVinegar)
-	oxminPlugin:AddExternalOxminChatCommand(self, "prod", {FLAG_VINEGAR}, self.ToggleProd)
+	oxminPlugin:AddExternalOxminChatCommand(self, "prod", {FLAG_PROD}, self.ToggleProd)
 
 	-- Read in Oxmin's stash of user infos.
 	-- From oxmin.lua

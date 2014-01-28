@@ -7,7 +7,7 @@
 PLUGIN.Title = "Vinegar"
 PLUGIN.Description = "Building modification plugin for admins and users."
 PLUGIN.Author = "Jonathan Porta (rurd4me) http://jonathanporta.com"
-PLUGIN.Version = "0.3"
+PLUGIN.Version = "0.5"
 
 function PLUGIN:Init()
 
@@ -21,6 +21,7 @@ function PLUGIN:Init()
 		self.config = {}
 		self.config.damage = 1000
 		self.config.vinegarForAll = true
+		self:Save()
 	end
 
 	-- List of users with Vinegar/prod enabled.

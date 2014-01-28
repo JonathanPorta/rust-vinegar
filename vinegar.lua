@@ -125,7 +125,9 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 				-- find the deployable owner
 				local deployableOwnerId = getDeployableOwnerId(deployable)
 				-- do some prodding!
-				self:DoProd(attackerNetuser, deployableOwnerId)
+				if(self:CanProd(attackerNetuser)) then
+					self:DoProd(attackerNetuser, structureOwnerId)
+				end
 				-- Going to return here so we can prod without killing sleepers.
 				damage.amount = 0
 				return damage
@@ -152,7 +154,9 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 			end
 
 			-- do some prodding!
-			self:DoProd(attackerNetuser, structureOwnerId)
+			if(self:CanProd(attackerNetuser)) then
+				self:DoProd(attackerNetuser, structureOwnerId)
+			end
 		end
 	end	
 end

@@ -29,8 +29,8 @@ function PLUGIN:Init()
 	self.prodUsers = {}
  
  	-- Get a reference to the oxmin plugin
-	local oxminPlugin = cs.findplugin("oxmin")
-	if (not oxminPlugin) then
+	self.oxminPlugin = cs.findplugin("oxmin")
+	if (not self.oxminPlugin) then
 		error("Oxmin plugin was not found!")
 		return
 	end
@@ -41,15 +41,15 @@ function PLUGIN:Init()
  
 	-- Register main chat command
 	if(self.config.vinegarForAll) then
-		-- If we are restricting to admins and flag holders
-		print("Vinegar enabled for all users.")
-		oxminPlugin:AddExternalOxminChatCommand(self, "vinegar", {}, self.ToggleVinegar)
-	else
 		-- If we want everyone to be able to use vinegar
+		print("Vinegar enabled for all users.")
+		self.oxminPlugin:AddExternalOxminChatCommand(self, "vinegar", {}, self.ToggleVinegar)
+	else
+		-- If we are restricting to admins and flag holders
 		print("Vinegar enabled for all flagged users only.")
-		oxminPlugin:AddExternalOxminChatCommand(self, "vinegar", {FLAG_VINEGAR}, self.ToggleVinegar)
+		self.oxminPlugin:AddExternalOxminChatCommand(self, "vinegar", {FLAG_VINEGAR}, self.ToggleVinegar)
 	end
-	oxminPlugin:AddExternalOxminChatCommand(self, "prod", {FLAG_PROD}, self.ToggleProd)
+	self.oxminPlugin:AddExternalOxminChatCommand(self, "prod", {FLAG_PROD}, self.ToggleProd)
 
 	-- Read in Oxmin's stash of user infos.
 	-- From oxmin.lua
@@ -105,35 +105,13 @@ function PLUGIN:ToggleVinegar(netuser, args)
 	end
 end
 
+-- lua rust bind lookups
+local getStructureMasterOwnerId = util.GetFieldGetter(Rust.StructureMaster, "ownerID", true)
+
 function PLUGIN:ModifyDamage(takedamage, damage)
 	--print("vinegar.lua - PLUGIN:ModifyDamage(takedamage, damage)")
 	
-	-- lua rust bind lookups
-	local getStructureMasterOwnerId = util.GetFieldGetter(Rust.StructureMaster, "ownerID", true)
-	local getDeployableOwnerId = util.GetFieldGetter(Rust.DeployableObject, "ownerID", true)
-
-	local deployable = takedamage:GetComponent("DeployableObject")
 	local structureComponent = takedamage:GetComponent("StructureComponent")
-
-	if (deployable) then
-		-- A Deployable has been attacked!
-		-- Find the culprit
-		local attackerNetuser = self:GetDamageEventAttackerNetuser(damage)
-
-		if(attackerNetuser) then
-			if(self:CanProd(attackerNetuser)) then
-				-- find the deployable owner
-				local deployableOwnerId = getDeployableOwnerId(deployable)
-				-- do some prodding!
-				if(self:CanProd(attackerNetuser)) then
-					self:DoProd(attackerNetuser, structureOwnerId)
-				end
-				-- Going to return here so we can prod without killing sleepers.
-				damage.amount = 0
-				return damage
-			end
-		end
-	end
 
 	if(structureComponent) then
 		-- A structure has been attacked!
@@ -144,8 +122,8 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 
 		if(attackerNetuser) then
 			-- Find the structure owner.
-			structureOwnerId = getStructureMasterOwnerId(structureMaster)
-			structureOwnerSteamId = rust.CommunityIDToSteamID(structureOwnerId)
+			local structureOwnerId = getStructureMasterOwnerId(structureMaster)
+			local structureOwnerSteamId = rust.CommunityIDToSteamID(structureOwnerId)
 
 			-- Figure out if the attacker is allowed to cause damage.
 			if(self:CanDamage(attackerNetuser, structureOwnerSteamId)) then
@@ -165,9 +143,9 @@ function PLUGIN:DoProd(attackerNetuser, ownerId)
 	-- Prod Implementation
 	local ownerDetails = self:GetUserDetailsByCommunityId(ownerId)
 	if(ownerDetails) then
-		rust.Notice(attackerNetuser, "This is owned by "..ownerDetails.Name.."!")
+		rust.SendChatToUser(attackerNetuser, "This is owned by "..ownerDetails.Name.."!")
 	else
-		rust.Notice(attackerNetuser, "Sorry, don't know who owns this...")
+		rust.SendChatToUser(attackerNetuser, "Sorry, don't know who owns this...")
 	end
 end
 
@@ -190,8 +168,10 @@ function PLUGIN:CanDamage(attackerNetuser, ownerSteamId)
 			return true
 		else
 			-- Only admins can destroy other's things for now!
-			local oxminPluginInstance = cs.findplugin("oxmin")
-			if(oxminPluginInstance.HasFlag(oxminPluginInstance, attackerNetuser, oxmin.AddFlag("godmode"), true)) then
+			if(not self.oxminPluginInstance) then
+				self.oxminPlugin = cs.findplugin("oxmin")
+			end
+			if(self.oxminPlugin.HasFlag(self.oxminPlugin, attackerNetuser, oxmin.AddFlag("godmode"), true)) then
 				return true
 			end
 		end
@@ -205,8 +185,8 @@ end
 ----
 
 function PLUGIN:NetuserToSteamID(netuser)
-	userID = rust.GetUserID(netuser)
-	steamID = rust.CommunityIDToSteamID(tonumber(userID))
+	local userID = rust.GetUserID(netuser)
+	local steamID = rust.CommunityIDToSteamID(tonumber(userID))
 	return steamID
 end
 

@@ -163,7 +163,7 @@ function PLUGIN:CanDamage(attackerNetuser, ownerSteamId)
 	local attackerSteamId = self:NetuserToSteamID(attackerNetuser)
 	if(self.vinegarUsers[attackerSteamId]) then
 		-- vinegar is on, but who's stuff are we messing with?
-		if(structureOwnerSteamId == attackerSteamId) then
+		if(ownerSteamId == attackerSteamId) then
 			-- destroying your own stuff? Proceed.
 			return true
 		else

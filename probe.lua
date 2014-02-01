@@ -27,8 +27,8 @@ function PLUGIN:Init()
 	self.probeUsers = {}
  
  	-- Get a reference to the oxmin plugin
-	local oxminPlugin = cs.findplugin("oxmin")
-	if (not oxminPlugin) then
+	self.oxminPlugin = cs.findplugin("oxmin")
+	if (not self.oxminPlugin) then
 		error("Oxmin plugin was not found!")
 		return
 	end
@@ -38,13 +38,13 @@ function PLUGIN:Init()
  
 	-- Register main chat command
 	if(self.config.probeForAll) then
-		-- If we are restricting to admins and flag holders
-		print("Probe enabled for all flagged users only.")
-		oxminPlugin:AddExternalOxminChatCommand(self, "probe", {FLAG_PROBE}, self.ToggleProbe)
-	else
 		-- If we want everyone to be able to use probe
 		print("Probe enabled for all users.")
-		oxminPlugin:AddExternalOxminChatCommand(self, "probe", {}, self.ToggleProbe)
+		self.oxminPlugin:AddExternalOxminChatCommand(self, "probe", {}, self.ToggleProbe)
+	else
+		-- If we are restricting to admins and flag holders
+		print("Probe enabled for all flagged users only.")
+		self.oxminPlugin:AddExternalOxminChatCommand(self, "probe", {FLAG_PROBE}, self.ToggleProbe)
 	end
 
 	-- Read in Oxmin's stash of user infos.
@@ -70,7 +70,7 @@ end
 function PLUGIN:ToggleProbe(netuser, args)
 
 	-- Toggles Probe on/off for user.
-	steamID = self:NetuserToSteamID(netuser)
+	local steamID = self:NetuserToSteamID(netuser)
 	
 	if(self.probeUsers[steamID]) then
 		self.probeUsers[steamID] = false
@@ -156,8 +156,8 @@ end
 ----
 
 function PLUGIN:NetuserToSteamID(netuser)
-	userID = rust.GetUserID(netuser)
-	steamID = rust.CommunityIDToSteamID(tonumber(userID))
+	local userID = rust.GetUserID(netuser)
+	local steamID = rust.CommunityIDToSteamID(tonumber(userID))
 	return steamID
 end
 

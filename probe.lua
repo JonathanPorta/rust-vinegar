@@ -14,12 +14,13 @@ function PLUGIN:Init()
 	-- Read saved config
 	self.configFile = util.GetDatafile("probe")
 	local txt = self.configFile:GetText()
-	if (txt ~= "") then
+	if(txt ~= "")then
 		self.config = json.decode(txt)
 	else
 		print("Probe config file missing. Falling back to default settings.")
 		self.config = {}
 		self.config.probeForAll = true
+		self.config.chatHandle = "Probe"
 		self:Save()
 	end
 
@@ -74,10 +75,10 @@ function PLUGIN:ToggleProbe(netuser, args)
 	
 	if(self.probeUsers[steamID]) then
 		self.probeUsers[steamID] = false
-		rust.SendChatToUser(netuser, "Probe off.")
+		rust.SendChatToUser(netuser, self.config.chatHandle, "Probe off.")
 	else
 		self.probeUsers[steamID] = true
-		rust.SendChatToUser(netuser, "Probe on.")
+		rust.SendChatToUser(netuser, self.config.chatHandle, "Probe on.")
 	end
 	
 end
@@ -91,7 +92,7 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 	local deployable = takedamage:GetComponent("DeployableObject")
 	local structureComponent = takedamage:GetComponent("StructureComponent")
 
-	if (deployable) then
+	if(deployable) then
 		-- A Deployable has been attacked!
 		-- Find the culprit
 		local attackerNetuser = self:GetDamageEventAttackerNetuser(damage)
@@ -136,9 +137,10 @@ function PLUGIN:DoProbe(attackerNetuser, ownerId)
 	-- Probe Implementation
 	local ownerDetails = self:GetUserDetailsByCommunityId(ownerId)
 	if(ownerDetails) then
-		rust.Notice(attackerNetuser, "This is owned by "..ownerDetails.Name.."!")
+		rust.SendChatToUser(attackerNetuser, self.config.chatHandle, "This is owned by "..ownerDetails.Name.."!")
 	else
-		rust.Notice(attackerNetuser, "Sorry, don't know who owns this...")
+		rust.SendChatToUser(attackerNetuser, self.config.chatHandle, "Sorry, don't know who owns this...")
+		rust.SendChatToUser(attackerNetuser, self.config.chatHandle, "They probably haven't logged into the server since the Oxmin data file was last deleted.")
 	end
 end
 

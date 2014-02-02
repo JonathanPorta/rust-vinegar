@@ -83,21 +83,23 @@ function PLUGIN:ToggleProbe(netuser, args)
 	
 end
 
-function PLUGIN:ModifyDamage(takedamage, damage)
-	
 	-- lua rust bind lookups
 	local getStructureMasterOwnerId = util.GetFieldGetter(Rust.StructureMaster, "ownerID", true)
 	local getDeployableOwnerId = util.GetFieldGetter(Rust.DeployableObject, "ownerID", true)
 
-	local deployable = takedamage:GetComponent("DeployableObject")
-	local structureComponent = takedamage:GetComponent("StructureComponent")
+function PLUGIN:ModifyDamage(takedamage, damage)
+	print("function PLUGIN:ModifyDamage(takedamage, damage)")
+	local attackerNetuser = self:GetDamageEventAttackerNetuser(damage)
 
-	if(deployable) then
-		-- A Deployable has been attacked!
-		-- Find the culprit
-		local attackerNetuser = self:GetDamageEventAttackerNetuser(damage)
+	if(attackerNetuser) then
+		local deployable = takedamage:GetComponent("DeployableObject")
+		local structureComponent = takedamage:GetComponent("StructureComponent")
 
-		if(attackerNetuser) then
+		if(deployable) then
+			print("if(deployable) then")
+			-- A Deployable has been attacked!
+			-- Find the culprit
+
 			if(self:CanProbe(attackerNetuser)) then
 				-- find the deployable owner
 				local deployableOwnerId = getDeployableOwnerId(deployable)
@@ -108,29 +110,28 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 				damage.amount = 0
 				return damage
 			end
+		elseif(structureComponent) then
+			print("if(structureComponent) then")
+			-- A structure has been attacked!
+			-- Find the structureMaster obj
+			local structureMaster = structureComponent._master
+			-- Find the culprit
+			local attackerNetuser = self:GetDamageEventAttackerNetuser(damage)
+
+			if(attackerNetuser) then
+				-- Find the structure owner.
+				structureOwnerId = getStructureMasterOwnerId(structureMaster)
+				structureOwnerSteamId = rust.CommunityIDToSteamID(structureOwnerId)
+
+				-- Figure out if the attacker is allowed to Probe
+				if(self:CanProbe(attackerNetuser)) then
+					self:DoProbe(attackerNetuser, structureOwnerId)
+					print("after probe 2") 
+					-- Should we be disabling the damage here? i am not sure.
+				end			
+			end
 		end
 	end
-
-	if(structureComponent) then
-		-- A structure has been attacked!
-		-- Find the structureMaster obj
-		local structureMaster = structureComponent._master
-		-- Find the culprit
-		local attackerNetuser = self:GetDamageEventAttackerNetuser(damage)
-
-		if(attackerNetuser) then
-			-- Find the structure owner.
-			structureOwnerId = getStructureMasterOwnerId(structureMaster)
-			structureOwnerSteamId = rust.CommunityIDToSteamID(structureOwnerId)
-
-			-- Figure out if the attacker is allowed to Probe
-			if(self:CanProbe(attackerNetuser)) then
-				self:DoProbe(attackerNetuser, structureOwnerId)
-				print("after probe 2") 
-				-- Should we be disabling the damage here? i am not sure.
-			end			
-		end
-	end	
 end
 
 function PLUGIN:DoProbe(attackerNetuser, ownerId)

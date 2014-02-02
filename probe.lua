@@ -88,7 +88,7 @@ end
 	local getDeployableOwnerId = util.GetFieldGetter(Rust.DeployableObject, "ownerID", true)
 
 function PLUGIN:ModifyDamage(takedamage, damage)
-	print("function PLUGIN:ModifyDamage(takedamage, damage)")
+	--print("function PLUGIN:ModifyDamage(takedamage, damage)")
 	local attackerNetuser = self:GetDamageEventAttackerNetuser(damage)
 
 	if(attackerNetuser) then
@@ -96,7 +96,7 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 		local structureComponent = takedamage:GetComponent("StructureComponent")
 
 		if(deployable) then
-			print("if(deployable) then")
+			--print("if(deployable) then")
 			-- A Deployable has been attacked!
 			-- Find the culprit
 
@@ -105,13 +105,13 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 				local deployableOwnerId = getDeployableOwnerId(deployable)
 				-- do some probing!
 				self:DoProbe(attackerNetuser, deployableOwnerId)
-				print("after probe 1") 
+				--print("after probe 1") 
 				-- Going to return here so we can probe without killing sleepers or items.
 				damage.amount = 0
 				return damage
 			end
 		elseif(structureComponent) then
-			print("if(structureComponent) then")
+			--print("if(structureComponent) then")
 			-- A structure has been attacked!
 			-- Find the structureMaster obj
 			local structureMaster = structureComponent._master
@@ -126,7 +126,7 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 				-- Figure out if the attacker is allowed to Probe
 				if(self:CanProbe(attackerNetuser)) then
 					self:DoProbe(attackerNetuser, structureOwnerId)
-					print("after probe 2") 
+					--print("after probe 2") 
 					-- Should we be disabling the damage here? i am not sure.
 				end			
 			end

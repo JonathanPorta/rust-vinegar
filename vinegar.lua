@@ -7,7 +7,7 @@
 PLUGIN.Title = "Vinegar"
 PLUGIN.Description = "Building modification plugin for admins and users."
 PLUGIN.Author = "Jonathan Porta (rurd4me) http://jonathanporta.com"
-PLUGIN.Version = "0.5"
+PLUGIN.Version = "0.6"
 
 function PLUGIN:Init()
 

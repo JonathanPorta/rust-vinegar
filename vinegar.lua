@@ -107,6 +107,13 @@ end
 
 -- lua rust bind lookups
 local getStructureMasterOwnerId = util.GetFieldGetter(Rust.StructureMaster, "ownerID", true)
+local NetCullRemove = util.FindOverloadedMethod(RustFirstPass.NetCull._type, "Destroy", bf.public_static, {UnityEngine.GameObject})
+
+function RemoveObject(object)
+    local objs = util.ArrayFromTable(cs.gettype("System.Object"), {object})
+    cs.convertandsetonarray( arr, 0, object , UnityEngine.GameObject._type )
+    NetCullRemove:Invoke(nil, objs) 
+end
 
 function PLUGIN:ModifyDamage(takedamage, damage)
 	--print("vinegar.lua - PLUGIN:ModifyDamage(takedamage, damage)")
@@ -128,6 +135,9 @@ function PLUGIN:ModifyDamage(takedamage, damage)
 			-- Figure out if the attacker is allowed to cause damage.
 			if(self:CanDamage(attackerNetuser, structureOwnerSteamId)) then
 				damage.amount = self.config.damage
+				if(takedamage.health <= 0 or takedamage.health - damage.amount <= 0) then
+					RemoveObject(takedamage.gameObject)
+				end
 				return damage
 			end
 
